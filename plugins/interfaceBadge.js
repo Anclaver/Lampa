@@ -1,0 +1,650 @@
+(function () {
+  'use strict';
+
+  const manifest = {
+    type: 'interface',
+    version: '5.2.10',
+    name: 'UI Badge',
+    component: 'ui_badge'
+  };
+  Lampa.Manifest.plugins = manifest;
+
+  // STYLES
+  const style = document.createElement('style');
+  const styleBadge = `
+    position: absolute;
+    font-size: 1.2em;
+    font-weight: 800;
+    padding: 0.2em 0.4em;
+    color: #000000 !important;
+    background: #FFFFFFcc !important;
+    line-height: 1;
+    white-space: nowrap;
+  `;
+  style.textContent = `
+    .card__type           { ${styleBadge} top: 0em;   bottom: unset;  left: 0em;    right: unset; border-radius: 0.8em 0 0.8em 0; }
+    .card__duration       { ${styleBadge} top: 0em;   bottom: unset;  left: unset;  right: 0em;   border-radius: 0 0.8em 0 0.8em; }
+    .card__watched        { ${styleBadge} top: 1.6em; bottom: unset;  left: unset;  right: 0em;   border-radius: 0.8em 0 0 0.8em; }
+    .card__age            { ${styleBadge} top: unset; bottom: 0em;    left: 0em;    right: unset; border-radius: 0 0.8em 0 0.8em; }
+    .card__vote           { ${styleBadge} top: unset; bottom: 0em;    left: unset;  right: 0em;   border-radius: 0.8em 0 0.8em 0; }
+    .card__quality        { ${styleBadge} top: unset; bottom: 1.6em;  left: unset;  right: 0em;   border-radius: 0.8em 0 0 0.8em; }
+    .card__icons          { left: unset; right: 0em; top: 50%; transform: translateY(-50%); }
+    .card__icons-inner    { flex-direction: column; }
+    .card__marker         { top: 3.2em; bottom: unset; left: 50%; transform: translateX(-50%); }
+
+    [data-level="vgood"]  { background: #3498DBcc !important; }
+    [data-level="good"]   { background: #2ECC71cc !important; }
+    [data-level="normal"] { background: #F1C40Fcc !important; }
+    [data-level="bad"]    { background: #E67E22cc !important; }
+    [data-level="vbad"]   { background: #E74C3Ccc !important; }
+  `;
+  document.head.appendChild(style);
+
+  // MAPS
+  const mapQuality = {
+    '4K': 'vgood',
+    'FHD': 'good',
+    'HD': 'normal',
+    'SD': 'bad',
+    'TV': 'bad',
+    'TC': 'bad',
+    'TS': 'vbad'
+  };
+  const mapStatusKey = {
+    'Ended': 'ended',
+    'Canceled': 'canceled',
+    'Returning Series': 'ongoing',
+    'Released': 'released',
+    'Post Production': 'post_production',
+    'In Production': 'in_production'
+  };
+  const mapStatus = {
+    ended: 'vgood',
+    ongoing: 'good',
+    canceled: 'normal',
+    released: 'vgood',
+    post_production: 'good',
+    in_production: 'normal'
+  };
+  const mapVote = [
+    { level: 'vgood', min: 8 },
+    { level: 'good', min: 7 },
+    { level: 'normal', min: 6 },
+    { level: 'bad', min: 4 },
+    { level: 'vbad', min: 0 }
+  ];
+  const mapPG = [
+    { level: 'vbad', min: 18 },
+    { level: 'bad', min: 16 },
+    { level: 'normal', min: 12 },
+    { level: 'good', min: 6 },
+    { level: 'vgood', min: 0 }
+  ];
+
+  // CACHE
+  const CACHE_TTL = 24 * 60 * 60 * 1000;
+  const CACHE_EMPTY_TTL = 6 * 60 * 60 * 1000;
+  const CACHE_FAIL_TTL = 60 * 1000;
+  const TMDB_CACHE_TV = 'badgeCache_tv';
+  const TMDB_CACHE_MOVIE = 'badgeCache_movie';
+  const QUALITY_CACHE = 'badgeCache_quality';
+
+  const cacheData = {};
+  const cacheTimers = {};
+
+  function cacheGetStore(name) {
+    if (cacheData[name]) return cacheData[name];
+    let stored = null;
+    try { stored = Lampa.Storage.get(name, null); } catch (_) { }
+    if (!stored || typeof stored !== 'object') stored = {};
+    const now = Date.now();
+    let changed = false;
+    for (const key in stored) {
+      const entry = stored[key];
+      if (!entry || !entry.timestamp) { delete stored[key]; changed = true; continue; }
+      const ttl = entry.failed ? CACHE_FAIL_TTL : (entry.empty ? CACHE_EMPTY_TTL : CACHE_TTL);
+      if (now - entry.timestamp > ttl) { delete stored[key]; changed = true; }
+    }
+    cacheData[name] = stored;
+    if (changed) cacheSaveStore(name);
+    return cacheData[name];
+  }
+  function cacheSaveStore(name) {
+    if (cacheTimers[name]) return;
+    cacheTimers[name] = setTimeout(() => {
+      cacheTimers[name] = 0;
+      try { Lampa.Storage.set(name, cacheData[name]); } catch (_) { }
+    }, 800);
+  }
+  function cacheGet(name, id) { return cacheGetStore(name)[id] || null; }
+  function cacheSet(name, id, value) {
+    value.timestamp = Date.now();
+    cacheGetStore(name)[id] = value;
+    cacheSaveStore(name);
+    return value;
+  }
+
+  // QUEUE
+  const REQUEST_POOL = [];
+  function poolGet() { return REQUEST_POOL.pop() || new Lampa.Reguest(); }
+  function poolRelease(network) {
+    try { network.clear(); } catch (_) { }
+    if (REQUEST_POOL.length < 5) REQUEST_POOL.push(network);
+  }
+  const QUEUE_MAX = 120;
+  const queues = {
+    fast: { running: 0, limit: 6, tasks: [] },
+    slow: { running: 0, limit: 6, tasks: [] }
+  };
+  function queueDrain(name) {
+    const queue = queues[name];
+    while (queue.running < queue.limit && queue.tasks.length) {
+      const item = queue.tasks.shift();
+      queue.running++;
+      item.task(() => { queue.running--; queueDrain(name); });
+    }
+  }
+  function enqueue(name, task, onDrop) {
+    const queue = queues[name];
+    queue.tasks.push({ task, onDrop });
+    while (queue.tasks.length > QUEUE_MAX) {
+      const dropped = queue.tasks.shift();
+      if (dropped && dropped.onDrop) { try { dropped.onDrop(); } catch (_) { } }
+    }
+    queueDrain(name);
+  }
+
+  // TMDB
+  const tmdbOverlayBlock = {};
+  function tmdbGet(type, id, cacheKey, callback) {
+    const idKey = String(id);
+    const cached = cacheGet(cacheKey, idKey);
+    if (cached) { callback(cached); return; }
+
+    const key = cacheKey + '|' + idKey;
+    if (tmdbOverlayBlock[key]) { tmdbOverlayBlock[key].push(callback); return; }
+
+    let url = '';
+    try { url = Lampa.TMDB.api(type + '/' + id + '?api_key=' + Lampa.TMDB.key()); } catch (_) { }
+    if (!url) { callback(null); return; }
+
+    tmdbOverlayBlock[key] = [callback];
+
+    const flush = (result) => {
+      const waiters = tmdbOverlayBlock[key];
+      delete tmdbOverlayBlock[key];
+      waiters.forEach((cb) => cb(result));
+    };
+
+    enqueue('fast', (done) => {
+      const network = poolGet();
+      network.timeout(7000);
+      network.silent(url,
+        (data) => {
+          poolRelease(network);
+          if (!data || typeof data !== 'object') { flush(null); done(); return; }
+          flush(cacheSet(cacheKey, idKey, tmdbOverlay(data)));
+          done();
+        },
+        () => {
+          poolRelease(network);
+          flush(cacheSet(cacheKey, idKey, { failed: true }));
+          done();
+        },
+        false
+      );
+    }, () => flush(null));
+  }
+  function tmdbOverlay(data) {
+    const last = data.last_episode_to_air || null;
+    return {
+      status: data.status,
+      release_date: data.release_date,
+      vote_average: data.vote_average,
+      runtime: data.runtime,
+      last_episode_to_air: last ? { season_number: last.season_number, episode_number: last.episode_number } : null,
+      seasons: (data.seasons || []).map((s) => ({ season_number: s.season_number, episode_count: s.episode_count }))
+    };
+  }
+
+  // QUALITY
+  const QUALITY_API_URL = 'jr.maxvol.pro';
+  const mapQualityBad = {
+    TV: [/\btvrip\b/, /\bhdtvrip\b/, /\biptvrip\b/, /\bsatrip\b/, /\bdsrip\b/, /\bdvbrip\b/],
+    TC: [/\btc\b/, /\btelecine\b/],
+    TS: [/\bts\b/, /\btsrip\b/, /\btelesync\b/, /\btelesynch\b/, /\bcamrip\b/, /\bvhsrip\b/, /\bupscale\b/],
+  };
+  const mapQualityRank = { '4K': 7, 'FHD': 6, 'HD': 5, 'SD': 4, 'TV': 3, 'TC': 2, 'TS': 1 };
+
+  function qualityMakeVideo(data) {
+    return {
+      id: data.id,
+      type: data.original_name || data.first_air_date ? 'tv' : 'movie',
+      title: data.title || data.name || '',
+      original_title: data.original_title || data.original_name || '',
+      release_date: data.release_date || data.first_air_date || ''
+    };
+  }
+  function qualityFromTitle(title) {
+    if (!title) return null;
+    const t = title.toLowerCase();
+    for (const key in mapQualityBad) {
+      if (mapQualityBad[key].some(p => p.test(t))) return key;
+    }
+    return null;
+  }
+  function qualityFromResult(res) {
+    if (res === 2160) return '4K';
+    if (res === 1080) return 'FHD';
+    if (res === 720) return 'HD';
+    if (res < 720) return 'SD';
+  }
+  function qualityFromEntry(res, title) {
+    return typeof res === 'number' ? qualityFromTitle(title) || qualityFromResult(res) : qualityFromTitle(title);
+  }
+  function qualityFetch(video, callback) {
+    const targetYear = parseInt((video.release_date || '').substring(0, 4), 10);
+    if (!targetYear) { callback(null); return; }
+
+    let url = 'https://' + QUALITY_API_URL + '/api/v2.0/indexers/all/results?year=' + targetYear;
+    let hasTitle = false;
+    if (video.title && /[a-zа-яё0-9]/i.test(video.title)) { url += '&title=' + encodeURIComponent(video.title.trim()); hasTitle = true; }
+    if (video.original_title && /[a-zа-яё]/i.test(video.original_title)) { url += '&title_original=' + encodeURIComponent(video.original_title.trim()); hasTitle = true; }
+    if (!hasTitle) { callback(null); return; }
+
+    const network = poolGet();
+    network.timeout(15000);
+    network.silent(url,
+      (resp) => {
+        poolRelease(network);
+        if (!resp) { callback(null); return; }
+        try {
+          const data = typeof resp === 'string' ? JSON.parse(resp) : resp;
+          const list = data.Results || [];
+          if (!Array.isArray(list) || !list.length) { callback(null); return; }
+          let best = null;
+          for (let i = 0; i < list.length; i++) {
+            const r = list[i];
+            const info = r.info || r.Info || {};
+            const res = info.quality;
+            const title = r.Title || '';
+            if (typeof res === 'number' && !res) continue;
+            const releaseYear = parseInt(info.relased, 10);
+            if (isNaN(releaseYear) || releaseYear < 1900) continue;
+            if (releaseYear < targetYear - 1 || releaseYear > targetYear + 1) continue;
+            const quality = qualityFromEntry(res, title);
+            if (!quality) continue;
+            if (quality === '4K') { best = '4K'; break; }
+            if (best === null || mapQualityRank[quality] > mapQualityRank[best]) best = quality;
+          }
+          callback(best);
+        } catch (_) { callback(null); }
+      },
+      () => {
+        poolRelease(network);
+        callback(null);
+      }
+    );
+  }
+  const qualityOverlayBlock = {};
+  function qualityGet(card, callback) {
+    const data = card && card.card_data;
+    if (!data || !data.id) { callback(null); return; }
+    const video = qualityMakeVideo(data);
+    const key = video.type + ':' + video.id;
+    const cached = cacheGet(QUALITY_CACHE, key);
+    if (cached) { callback(cached.quality); return; }
+
+    if (qualityOverlayBlock[key]) { qualityOverlayBlock[key].push(callback); return; }
+
+    qualityOverlayBlock[key] = [callback];
+
+    const flush = (quality) => {
+      const waiters = qualityOverlayBlock[key];
+      delete qualityOverlayBlock[key];
+      waiters.forEach((cb) => cb(quality));
+    };
+
+    enqueue('slow', (done) => {
+      qualityFetch(video, (quality) => {
+        cacheSet(QUALITY_CACHE, key, { quality: quality || null, empty: !quality });
+        flush(quality);
+        done();
+      });
+    }, () => flush(null));
+  }
+
+  // RENDER
+  function cardView(card) {
+    let view = card.__uiBadgeView;
+    if (view && view.isConnected && card.contains(view)) return view;
+    view = card.querySelector('.card__view');
+    card.__uiBadgeView = view;
+    return view;
+  }
+  function setBadge(card, cls, text, level) {
+    const view = cardView(card);
+    if (!view) return;
+    let el = view.querySelector('.' + cls);
+    if (!text) { if (el) el.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.className = cls; view.appendChild(el); }
+    if (el.textContent !== text) el.textContent = text;
+    if (level) el.setAttribute('data-level', level);
+    else el.removeAttribute('data-level');
+  }
+  function formatEpisode(season, episode) {
+    return `S${season}:E${episode}`;
+  }
+  function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const parts = String(dateStr).split('-');
+    if (parts.length !== 3) return dateStr;
+    return parts[2] + '.' + parts[1] + '.' + parts[0];
+  }
+  function findLevel(map, value) {
+    const rule = map.find(r => value >= r.min);
+    return rule ? rule.level : null;
+  }
+
+  function renderAge(card, info) {
+    const age = card.querySelector('.card__age');
+    const view = card.querySelector('.card__view');
+    if (!age || !view) return;
+    if (age.parentNode !== view) view.appendChild(age);
+
+    const status = info && info.status;
+    const level = mapStatus[mapStatusKey[status]];
+    if (!level) return;
+
+    age.setAttribute('data-level', level);
+
+    const data = card.card_data;
+    if (data.original_title && (status === 'Post Production' || status === 'In Production')) {
+      const releaseDate = info.release_date || data.release_date;
+      if (releaseDate) age.textContent = formatDate(releaseDate);
+    }
+  }
+  function renderDuration(card, info) {
+    const data = card && card.card_data;
+    if (!data) return;
+
+    if (data.original_name) {
+      const last = info && info.last_episode_to_air;
+      if (!last || !last.season_number || !last.episode_number) {
+        setBadge(card, 'card__duration', null);
+        return;
+      }
+      setBadge(card, 'card__duration', formatEpisode(last.season_number, last.episode_number));
+      return;
+    }
+    let total = null;
+    if (data.original_title) {
+      const t = Lampa.Timeline.view(Lampa.Utils.hash(data.original_title));
+      if (t && t.duration > 0) total = Lampa.Utils.secondsToTime(t.duration, true);
+    }
+    if (!total) {
+      const runtime = info && info.runtime;
+      if (!runtime) { setBadge(card, 'card__duration', null); return; }
+      total = Lampa.Utils.secondsToTime(runtime * 60, true);
+    }
+    setBadge(card, 'card__duration', total);
+  }
+  function renderWatched(card, info) {
+    const data = card && card.card_data;
+    if (!data) return;
+
+    if (data.original_name) {
+      const last = info && info.last_episode_to_air;
+      if (!last) { setBadge(card, 'card__watched', null); return; }
+
+      const name = data.original_name;
+      const seasonMap = {};
+      (info.seasons || []).forEach((s) => { if (s.season_number > 0) seasonMap[s.season_number] = s.episode_count; });
+
+      for (let season = last.season_number; season >= 1; season--) {
+        const maxEp = season === last.season_number ? last.episode_number : (seasonMap[season] || 0);
+        for (let episode = maxEp; episode >= 1; episode--) {
+          const hash = Lampa.Utils.hash([season, season > 10 ? ':' : '', episode, name].join(''));
+          const t = Lampa.Timeline.view(hash);
+          if (t.time > 0 || t.percent > 0) {
+            setBadge(card, 'card__watched', formatEpisode(season, episode));
+            return;
+          }
+        }
+      }
+      setBadge(card, 'card__watched', null);
+      return;
+    }
+    if (data.original_title) {
+      const t = Lampa.Timeline.view(Lampa.Utils.hash(data.original_title));
+      if (t && t.time > 0) {
+        setBadge(card, 'card__watched', Lampa.Utils.secondsToTime(t.time, true));
+        return;
+      }
+    }
+    setBadge(card, 'card__watched', null);
+  }
+  function renderQuality(card, quality) {
+    setBadge(card, 'card__quality', quality, quality ? mapQuality[quality] : null);
+  }
+  function renderVote(el, info) {
+    let voteEl = el;
+    let view = null;
+
+    if (el.classList.contains('card')) {
+      view = el.querySelector('.card__view');
+      if (!view) return;
+      voteEl = view.querySelector('.card__vote');
+    }
+
+    const value = info && parseFloat(info.vote_average);
+    if (!voteEl && !value) return;
+
+    if (value) {
+      if (!voteEl) {
+        voteEl = document.createElement('div');
+        voteEl.className = 'card__vote';
+        view.appendChild(voteEl);
+      }
+      const text = value.toFixed(1);
+      if (voteEl.textContent !== text) voteEl.textContent = text;
+    }
+
+    const level = findLevel(mapVote, parseFloat(voteEl.textContent));
+    if (level) voteEl.setAttribute('data-level', level);
+  }
+  function renderPG(el) {
+    const value = parseInt((el.textContent.match(/\d+/) || [])[0], 10);
+    if (isNaN(value)) return;
+    const level = findLevel(mapPG, value);
+    if (level) el.setAttribute('data-level', level);
+  }
+  function renderStatus(el, movie) {
+    if (!el || !movie) return;
+    const level = mapStatus[mapStatusKey[movie.status]];
+    if (level) el.setAttribute('data-level', level);
+  }
+  function renderType(card, isTV) {
+    setBadge(card, 'card__type', isTV ? 'Сериал' : 'Фильм', isTV ? 'vgood' : 'good');
+  }
+
+  // PROCESS
+  function processPull(card) {
+    const data = card && card.card_data;
+    if (!data) return;
+    const idStr = String(data.id);
+    if (card.getAttribute('data-pulled') === idStr) return;
+    card.setAttribute('data-pulled', idStr);
+    Lampa.Storage.set('activity', { movie: data, card: data });
+    Lampa.Listener.send('lampac', { type: 'timecode_pullFromServer' });
+  }
+  function processCard(card) {
+    const data = card && card.card_data;
+    if (!data || !data.id || (!data.original_name && !data.original_title)) return;
+
+    processPull(card);
+    renderAge(card);
+    renderType(card, !!data.original_name);
+
+    const type = data.original_name ? 'tv' : 'movie';
+    const cacheKey = data.original_name ? TMDB_CACHE_TV : TMDB_CACHE_MOVIE;
+    tmdbGet(type, data.id, cacheKey, (info) => {
+      if (!card.parentNode) return;
+      renderAge(card, info);
+      renderVote(card, info);
+      renderDuration(card, info);
+      renderWatched(card, info);
+    });
+
+    qualityGet(card, (quality) => {
+      if (!card.parentNode) return;
+      renderQuality(card, quality);
+    });
+  }
+  function processListener() {
+    if (window.ui_badge_card) return;
+
+    try {
+      const CardMaker = Lampa.Maker.map('Card');
+      if (CardMaker && CardMaker.Card && !CardMaker.Card.__ui_badge_patched__) {
+        const originalOnVisible = CardMaker.Card.onVisible;
+        CardMaker.Card.onVisible = function () {
+          if (originalOnVisible) originalOnVisible.apply(this, arguments);
+          const card = this.html || this.card;
+          let data = card && card.card_data;
+          if (!data && this.card && this.card.card_data) data = this.card.card_data;
+          if (!data && this.card_data) data = this.card_data;
+          if (card && data && data.id) { scanObserveCard(card); processCard(card); }
+        };
+        CardMaker.Card.__ui_badge_patched__ = true;
+      }
+      window.ui_badge_card = true;
+    } catch (_) { }
+  }
+
+  // SCAN
+  const SCAN_LIMIT = 80;
+  const SCAN_MARGIN = 200;
+
+  const scanTimers = {};
+  function scanLater(fn, delay, key) {
+    const id = key || ('t' + Date.now() + Math.random());
+    if (scanTimers[id]) clearTimeout(scanTimers[id]);
+    scanTimers[id] = setTimeout(() => {
+      delete scanTimers[id];
+      try { fn(); } catch (_) { }
+    }, delay || 0);
+    return id;
+  }
+  let scanObserver = null;
+  const observedCards = [];
+  function scanObserveCard(card) {
+    if (!scanObserver || !card || card.nodeType !== 1) return;
+    if (card.getAttribute('data-observed') === '1') return;
+    card.setAttribute('data-observed', '1');
+    try { scanObserver.observe(card); observedCards.push(card); } catch (_) { }
+  }
+  function scanPrune() {
+    if (!scanObserver || !observedCards.length) return;
+    for (let i = observedCards.length - 1; i >= 0; i--) {
+      const node = observedCards[i];
+      if (node && node.parentNode && document.body.contains(node)) continue;
+      try { scanObserver.unobserve(node); } catch (_) { }
+      if (node && node.removeAttribute) node.removeAttribute('data-observed');
+      observedCards.splice(i, 1);
+    }
+  }
+  function scanIsBlocked() {
+    if (document.hidden) return true;
+    const selectors = ['.modal', '.settings-input__content', '.selectbox__content', '.menu-edit-list'];
+    for (let i = 0; i < selectors.length; i++) {
+      const node = document.querySelector(selectors[i]);
+      if (node && node.offsetParent !== null) return true;
+    }
+    return false;
+  }
+  function scanIsNearViewport(card, windowHeight) {
+    const rect = card.getBoundingClientRect();
+    return !(rect.bottom < -SCAN_MARGIN || rect.top > windowHeight + SCAN_MARGIN);
+  }
+  function scanContainer(target) {
+    if (!target || !target.querySelectorAll) return;
+    if (scanIsBlocked()) return;
+
+    const cards = target.querySelectorAll('.card:not([data-observed])');
+    const wH = window.innerHeight || 1000;
+    let updated = 0;
+
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      scanObserveCard(card);
+
+      if (updated >= SCAN_LIMIT) break;
+      if (!card.card_data || !card.card_data.id) continue;
+      if (!scanIsNearViewport(card, wH)) continue;
+
+      processCard(card);
+      updated++;
+    }
+  }
+  function scan() {
+    let render = null;
+    try {
+      const a = Lampa.Activity && Lampa.Activity.active ? Lampa.Activity.active() : null;
+      render = a && a.activity && a.activity.render ? a.activity.render() : null;
+      if (render && render.nodeType !== 1 && render.length) render = render[0];
+    } catch (_) { }
+    scanContainer(render && render.nodeType === 1 ? render : document.body);
+  }
+
+  // INIT
+  function start() {
+    if (window.ui_badge) return;
+    window.ui_badge = true;
+
+    if (typeof IntersectionObserver !== 'undefined') {
+      scanObserver = new IntersectionObserver((entries) => {
+        for (let i = 0; i < entries.length; i++) {
+          const card = entries[i].target;
+          if (card && entries[i].isIntersecting && card.card_data && card.card_data.id) processCard(card);
+        }
+      }, { root: null, rootMargin: '250px 0px 250px 0px', threshold: 0.01 });
+    }
+
+    processListener();
+
+    Lampa.Listener.follow('activity', (e) => {
+      if (e.type === 'destroy' || e.type === 'archive') { scanLater(scanPrune, 0, 'prune'); return; }
+      [0, 150, 400, 900].forEach(d => scanLater(scan, d, 'scan-' + d));
+    });
+    Lampa.Listener.follow('line', (e) => {
+      if (!e || (e.type !== 'append' && e.type !== 'create' && e.type !== 'visible')) return;
+      let body = null;
+      if (e.body) {
+        if (e.body.nodeType === 1) body = e.body;
+        else if (e.body.length && e.body[0] && e.body[0].nodeType === 1) body = e.body[0];
+      }
+      scanLater(() => body ? scanContainer(body) : scan(), 30, 'scan-line');
+    });
+    Lampa.Listener.follow('full', (event) => {
+      if (event.type === 'complite' && event.data && event.data.movie) {
+        const r = event.object && event.object.activity && event.object.activity.render
+          ? event.object.activity.render() : null;
+        if (!r) return;
+        $(r).find('.full-start__rate').each(function () { renderVote(this); });
+        $(r).find('.full-start__pg').each(function () { renderPG(this); });
+        $(r).find('.full-start__status').each(function () { renderStatus(this, event.data.movie); });
+        $(r).find('.full-start-new__poster .card__type').remove();
+      }
+    });
+
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) scanLater(scan, 0, 'scan-visible'); });
+
+    scanLater(scan, 200, 'boot-200');
+    scanLater(scan, 600, 'boot-600');
+  }
+
+  if (window.appready) start();
+  else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });
+
+})();
