@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0d1117">
+<meta name="description" content="Плагины для медиацентра Lampa: свои категории в Избранном, метки на карточках, компактный интерфейс и адаптация под телефон.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lampa Plugins">
+<meta property="og:description" content="Плагины для медиацентра Lampa: Избранное, метки, интерфейс и мобильная версия.">
+<meta property="og:url" content="https://anclaver.github.io/Lampa/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%2358a6ff' d='M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z'/%3E%3C/svg%3E">
+<title>Lampa Plugins</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-alt: #161b22;
+    --border: #30363d;
+    --border-muted: #21262d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-hover: #79c0ff;
+    --green: #3fb950;
+    --btn: #21262d;
+    --btn-hover: #30363d;
+    --radius: 12px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* HEADER */
+  header {
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #161b22 0%, var(--bg) 100%);
+  }
+
+  .hero {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 56px 0 44px;
+  }
+
+  .hero__logo {
+    flex: none;
+    width: 60px;
+    height: 60px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--bg-alt);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .hero__logo:hover { border-color: #484f58; background: var(--bg); }
+
+  .hero__logo svg { width: 34px; height: 34px; fill: var(--accent); }
+
+  .hero__title { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.02em; }
+
+  .hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-alt);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
+  .chip svg { width: 13px; height: 13px; fill: currentColor; }
+
+  /* SECTIONS */
+  main { padding: 44px 0 8px; }
+
+  section { margin-bottom: 56px; }
+
+  .section__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 22px;
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  .section__title { margin: 0; font-size: 1.35rem; font-weight: 600; }
+
+  /* PLUGIN CARDS */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .card {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-alt);
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .card:hover { border-color: #484f58; transform: translateY(-2px); }
+
+  .card__top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .card__icon {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--bg);
+  }
+
+  .card__icon svg { width: 18px; height: 18px; fill: var(--accent); }
+
+  .card__name { margin: 0; font-size: 1.02rem; font-weight: 600; }
+  .card__component { color: var(--text-muted); font-family: var(--mono); font-size: 0.74rem; }
+
+  .card__desc { margin: 0 0 14px; color: var(--text-muted); font-size: 0.9rem; }
+
+  .card__copy { margin-top: auto; }
+
+  /* CODE BLOCKS */
+  .code {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-alt);
+  }
+
+  .code__text {
+    min-width: 0;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--text);
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
+  }
+
+  .copy {
+    flex: none;
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 13px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--btn);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+
+  .copy:hover { background: var(--btn-hover); border-color: #484f58; }
+  .copy svg { width: 14px; height: 14px; fill: currentColor; }
+  .copy.done { color: var(--green); border-color: #2ea04366; }
+
+  .code-row__label {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+  }
+
+  /* STEPS */
+  .steps { margin: 0; padding: 0; list-style: none; counter-reset: step; }
+
+  .steps li {
+    position: relative;
+    padding: 0 0 22px 46px;
+    counter-increment: step;
+  }
+
+  .steps li:last-child { padding-bottom: 0; }
+
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--bg-alt);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+  }
+
+  .steps li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 34px;
+    bottom: 2px;
+    width: 1px;
+    background: var(--border-muted);
+  }
+
+  .steps strong { display: block; margin-bottom: 2px; font-weight: 600; }
+  .steps span { color: var(--text-muted); font-size: 0.9rem; }
+  .steps code {
+    padding: 2px 6px;
+    border: 1px solid var(--border-muted);
+    border-radius: 6px;
+    background: var(--bg-alt);
+    font-family: var(--mono);
+    font-size: 0.82rem;
+  }
+
+  /* SUPPORT */
+  .support {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-alt);
+  }
+
+  .support__head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .support__icon {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg);
+    font-size: 1.3rem;
+  }
+
+  .support__body { min-width: 0; }
+  .support__title { margin: 0 0 4px; font-size: 1rem; font-weight: 600; }
+  .support__text { margin: 0; color: var(--text-muted); font-size: 0.88rem; }
+
+  .support__wallet { margin-top: 18px; }
+  .support__wallet .code { margin-top: 8px; }
+
+  /* FOOTER */
+  footer {
+    margin-top: 24px;
+    padding: 28px 0 44px;
+    border-top: 1px solid var(--border-muted);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+  }
+
+  footer a { font-weight: 500; }
+
+  @media (max-width: 640px) {
+    .hero { flex-direction: column; align-items: flex-start; padding: 40px 0 32px; }
+    .hero__title { font-size: 1.7rem; }
+    .code__text { white-space: normal; word-break: break-all; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="wrap hero">
+      <a class="hero__logo" href="https://github.com/Anclaver/Lampa" aria-label="Репозиторий Lampa Plugins на GitHub">
+        <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+      </a>
+      <div>
+        <h1 class="hero__title">Lampa Plugins</h1>
+        <div class="hero__meta">
+          <span class="chip"><svg viewBox="0 0 16 16"><path d="M11.93 8.5a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.002 4.002 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5Zm-1.43-.75a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/></svg>Плагинов: 5</span>
+          <span class="chip"><svg viewBox="0 0 16 16"><path d="M1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25V1.75C0 .784.784 0 1.75 0ZM1.5 1.75v12.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25H1.75a.25.25 0 0 0-.25.25ZM11.75 3a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-1.5 0v-7.5a.75.75 0 0 1 .75-.75Zm-8.25.75a.75.75 0 0 1 1.5 0v5.5a.75.75 0 0 1-1.5 0ZM8 3a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 3Z"/></svg>Работают с Lampac</span>
+          <span class="chip"><svg viewBox="0 0 16 16"><path d="M8 0a8 8 0 1 1 0 16A8 8 0 0 1 8 0Zm0 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13Zm.75 3.25v3.19l2.47 1.42a.75.75 0 0 1-.75 1.3L7.62 8.88a.75.75 0 0 1-.37-.65V4.75a.75.75 0 0 1 1.5 0Z"/></svg>Без лишней настройки</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section id="plugins">
+      <div class="section__head">
+        <h2 class="section__title">Плагины</h2>
+      </div>
+      <div class="grid" id="plugins-grid"></div>
+    </section>
+
+    <section id="install">
+      <div class="section__head">
+        <h2 class="section__title">Установка в Lampa</h2>
+      </div>
+      <ol class="steps">
+        <li>
+          <strong>Скопируйте ссылку</strong>
+          <span>Возьмите адрес нужного плагина из карточки выше.</span>
+        </li>
+        <li>
+          <strong>Откройте настройки</strong>
+          <span>В Lampa перейдите: <code>Настройки</code> → <code>Расширения</code>.</span>
+        </li>
+        <li>
+          <strong>Нажмите «Добавить плагин»</strong>
+          <span>Кнопка находится внизу списка расширений.</span>
+        </li>
+        <li>
+          <strong>Вставьте ссылку</strong>
+          <span>Вставьте скопированный адрес в поле и подтвердите.</span>
+        </li>
+        <li>
+          <strong>Перезапустите Lampa</strong>
+          <span>Плагин появится в списке установленных и начнёт работать.</span>
+        </li>
+      </ol>
+    </section>
+
+    <section id="support">
+      <div class="section__head">
+        <h2 class="section__title">Поддержка</h2>
+      </div>
+      <div class="support">
+        <div class="support__head">
+          <div class="support__icon" aria-hidden="true">☕</div>
+          <div class="support__body">
+            <p class="support__title">Поддержать разработку</p>
+            <p class="support__text">Плагины бесплатные и делаются в свободное время. Если они оказались полезны — можно угостить автора кофе.</p>
+          </div>
+        </div>
+        <div class="support__wallet">
+          <div class="code-row__label">USDT (TRC-20)</div>
+          <div class="code">
+            <span class="code__text" id="support-wallet">TLq8787tnQMCAz2iHSRpAZei81RTQasps9</span>
+            <button class="copy" type="button" data-copy-target="support-wallet">
+              <svg viewBox="0 0 16 16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>
+              <span>Копировать</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p><a href="https://github.com/Anclaver/Lampa">Исходники на GitHub</a> · <a href="https://github.com/yumata/lampa">Lampa</a> · <a href="https://github.com/lampac-nextgen/lampac">Lampac</a></p>
+    </div>
+  </footer>
+
+  <script type="application/json" id="plugins-data">
+  [
+    {
+      "file": "favoritePlus.js",
+      "component": "favorite_plus",
+      "name": "Favorite Plus",
+      "desc": "Свои категории в Избранном: создание, переименование и удаление. Добавление фильма/сериала прямо из карточки."
+    },
+    {
+      "file": "favoritePoster.js",
+      "component": "favorite_poster",
+      "name": "Favorite Poster",
+      "desc": "Обновляет постеры фильмов/сериалов в Избранном свежими изображениями."
+    },
+    {
+      "file": "interfaceBadge.js",
+      "component": "ui_badge",
+      "name": "UI Badge",
+      "desc": "Показывает на карточках тип, длительность, прогресс просмотра, качество, рейтинг. Цветная индикация."
+    },
+    {
+      "file": "interfaceStyle.js",
+      "component": "ui_style",
+      "name": "UI Style",
+      "desc": "Делает интерфейс компактнее, вмещает больше карточек, регулировка размера через меню. На странице фильма/сериала кнопки Торрент/Онлайн впереди, добавляет оригинальное название."
+    },
+    {
+      "file": "mobileStyle.js",
+      "component": "ui_mobile",
+      "name": "UI Mobile",
+      "desc": "Добавляет кнопку «Избранное» в нижнюю панель на телефоне — до нужного раздела всегда один тап."
+    }
+  ]
+  </script>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var BASE = 'https://anclaver.github.io/Lampa/plugins/';
+    var ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h12.5a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25Zm7.47 3.97a.75.75 0 0 1 1.06 0l2 2a.75.75 0 0 1 0 1.06l-2 2a.75.75 0 1 1-1.06-1.06L10.69 8 9.22 6.53a.75.75 0 0 1 0-1.06ZM6.78 4.53a.75.75 0 0 0-1.06 0l-2 2a.75.75 0 0 0 0 1.06l2 2a.75.75 0 1 0 1.06-1.06L5.31 8l1.47-1.47a.75.75 0 0 0 0-1.06Z"/></svg>';
+
+    function el(tag, cls, html) {
+      var node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (html != null) node.innerHTML = html;
+      return node;
+    }
+
+    function copyBlock(id, url) {
+      return '<div class="code">' +
+        '<span class="code__text" id="' + id + '">' + url + '</span>' +
+        '<button class="copy" type="button" data-copy-target="' + id + '">' +
+          '<svg viewBox="0 0 16 16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>' +
+          '<span>Копировать</span>' +
+        '</button>' +
+      '</div>';
+    }
+
+    function pluginCard(item) {
+      var card = el('article', 'card');
+      card.innerHTML =
+        '<div class="card__top">' +
+          '<div class="card__icon">' + ICON + '</div>' +
+          '<div>' +
+            '<h3 class="card__name">' + item.name + '</h3>' +
+            '<div class="card__component">' + item.component + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<p class="card__desc">' + item.desc + '</p>' +
+        '<div class="card__copy">' + copyBlock('url-' + item.component, BASE + item.file) + '</div>';
+      return card;
+    }
+
+    function copy(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+      var area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(area);
+      return Promise.resolve();
+    }
+
+    function bindCopy() {
+      document.addEventListener('click', function (event) {
+        var button = event.target.closest('.copy');
+        if (!button) return;
+        var target = document.getElementById(button.getAttribute('data-copy-target'));
+        if (!target) return;
+        var text = target.textContent.trim();
+        copy(text).then(function () {
+          var label = button.querySelector('span');
+          var original = label.textContent;
+          button.classList.add('done');
+          label.textContent = 'Скопировано';
+          setTimeout(function () {
+            button.classList.remove('done');
+            label.textContent = original;
+          }, 1600);
+        });
+      });
+    }
+
+    function start() {
+      var raw = document.getElementById('plugins-data').textContent;
+      var plugins;
+      try { plugins = JSON.parse(raw); } catch (e) { plugins = []; }
+
+      var grid = document.getElementById('plugins-grid');
+      plugins.forEach(function (item) {
+        grid.appendChild(pluginCard(item));
+      });
+
+      bindCopy();
+    }
+
+    start();
+  })();
+  </script>
+</body>
+</html>
