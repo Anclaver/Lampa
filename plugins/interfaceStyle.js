@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.3.0',
+    version: '5.3.1',
     name: 'UI Style',
     component: 'ui_style'
   };
@@ -77,7 +77,7 @@
   // MOBILE
   function mobileStart() {
     const BAR_ACTION = 'favorite';
-    const barOrders = { back: 1, main: 2, search: 4, settings: 5 };
+    const barOrders = { main: 2, search: 4, settings: 5 };
 
     function barClick() {
       const item = document.querySelector('.menu__item[data-action="' + BAR_ACTION + '"]');
@@ -86,9 +86,12 @@
       if (Lampa.Menu && Lampa.Menu.close) Lampa.Menu.close();
     }
 
-    function barInsert() {
+    function barModify() {
       const bar = document.querySelector('.navigation-bar__body');
       if (!bar || bar.querySelector('.navigation-bar-favorite')) return;
+
+      const back = document.querySelector('.navigation-bar__item[data-action="back"]');
+      if (back) back.remove();
 
       const item = document.querySelector('.menu__item[data-action="' + BAR_ACTION + '"]');
       if (!item) return;
@@ -115,7 +118,7 @@
       bar.appendChild(el);
     }
 
-    barInsert();
+    barModify();
   }
 
   // INIT
