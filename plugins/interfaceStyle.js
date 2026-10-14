@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.2.2',
+    version: '5.2.3',
     name: 'UI Style',
     component: 'ui_style'
   };
@@ -13,7 +13,7 @@
   const style = document.createElement('style');
   style.textContent = `
     .full-start-new__buttons .full-start__button:not(.focus) span { display: unset; }
-    .full-start__title-original { font-size: 1.6em; margin-bottom: 0em; }
+    .full-start-new__title-original { font-size: 1.6em; margin-bottom: 0em; }
     .source--name { display: none; }
 
     .time-line > div,
@@ -52,20 +52,25 @@
 
     // BUTTONS
     const buttonsContainer = e.body.find('.full-start-new__buttons');
-    const buttonTorrent = e.body.find('.view--torrent').removeClass('hide');
-    const buttonOnline = e.body.find('.view--online').removeClass('hide');
-    buttonsContainer.find('.button--play, .button--reaction, .button--subscribe, .button--options').remove();
-    buttonsContainer.prepend(buttonTorrent[0], buttonOnline[0]);
-    buttonTorrent.toggleClass('hide', !Lampa.Storage.field('parser_use'));
+    const buttonOnline = e.body.find('.view--online');
+    const buttonTorrent = e.body.find('.view--torrent');
+    const buttonBook = e.body.find('.button--book');
+
+    buttonsContainer.children('.full-start__button')
+      .not(buttonOnline).not(buttonTorrent).not(buttonBook)
+      .remove();
+
+    [buttonOnline, buttonTorrent, buttonBook].forEach((button) => {
+      if (button.length) buttonsContainer.append(button);
+    });
 
     // TITLE
+    const title = e.data.movie.title;
+    const titleOriginal = e.data.movie.original_title;
     const titleElement = e.body.find('.full-start-new__title');
-    const title = e.data.movie.title || e.data.movie.name;
-    const originalTitle = e.data.movie.original_title || e.data.movie.original_name;
-    if (title && originalTitle && title !== originalTitle) {
-      const originalTitleHtml = '<div class="full-start__title-original">' + originalTitle + '</div>';
-      titleElement.before(originalTitleHtml);
-      titleElement.text(title);
+
+    if (title && titleOriginal && title !== titleOriginal) {
+      titleElement.before($('<div class="full-start-new__title-original"></div>').text(titleOriginal));
     }
   });
 
