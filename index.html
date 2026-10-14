@@ -158,7 +158,6 @@
   .card__icon svg { width: 18px; height: 18px; fill: var(--accent); }
 
   .card__name { margin: 0; font-size: 1.02rem; font-weight: 600; }
-  .card__component { color: var(--text-muted); font-family: var(--mono); font-size: 0.74rem; }
 
   .card__desc { margin: 0 0 14px; color: var(--text-muted); font-size: 0.9rem; }
 
@@ -424,19 +423,7 @@
       "file": "interfaceStyle.js",
       "component": "ui_style",
       "name": "UI Style",
-      "desc": "Делает интерфейс компактнее, вмещает больше карточек, регулировка размера через меню. На странице фильма/сериала кнопки Торрент/Онлайн впереди, добавляет оригинальное название."
-    },
-    {
-      "file": "mobileStyle.js",
-      "component": "ui_mobile",
-      "name": "UI Mobile",
-      "desc": "Добавляет кнопку «Избранное» в нижнюю панель на телефоне — до нужного раздела всегда один тап."
-    },
-    {
-      "file": "interfaceExit.js",
-      "component": "ui_exit",
-      "name": "UI Exit",
-      "desc": "Убирает подтверждение выхода из приложения."
+      "desc": "Добавляет на странице фильма/сериала оригинальное название, кнопки Онлайн/Торрент впереди. Убирает подтверждение выхода из приложения. На телефоне добавляет «Избранное» в нижнюю панель."
     }
   ]
   </script>
@@ -472,7 +459,6 @@
           '<div class="card__icon">' + ICON + '</div>' +
           '<div>' +
             '<h3 class="card__name">' + item.name + '</h3>' +
-            '<div class="card__component">' + item.component + '</div>' +
           '</div>' +
         '</div>' +
         '<p class="card__desc">' + item.desc + '</p>' +
