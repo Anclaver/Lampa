@@ -3,75 +3,132 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.2.3',
+    version: '5.3.0',
     name: 'UI Style',
     component: 'ui_style'
   };
   Lampa.Manifest.plugins = manifest;
 
-  // STYLES
-  const style = document.createElement('style');
-  style.textContent = `
-    .full-start-new__buttons .full-start__button:not(.focus) span { display: unset; }
-    .full-start-new__title-original { font-size: 1.6em; margin-bottom: 0em; }
-    .source--name { display: none; }
-
-    .time-line > div,
-    .torrent-serial__progress,
-    .player-panel__position,
-    .player-panel__position > div:after { background-color: #3498DB }
-
-    .loading-layer__box { width: 240px; }
-    .loading-layer__text { font-size: 1.2em; line-height: 1.2; tab-size: 6; white-space: pre-wrap; }
-  `;
-  document.head.appendChild(style);
-
-  // SIZE
-  const originalLine = Lampa.Maker.map('Line').Items.onInit;
-  Lampa.Maker.map('Line').Items.onInit = function () {
-    originalLine.call(this);
-    this.view = 12;
-  };
-  const originalCategory = Lampa.Maker.map('Category').Items.onInit;
-  Lampa.Maker.map('Category').Items.onInit = function () {
-    originalCategory.call(this);
-    this.limit_view = 12;
-  };
-
-  Lampa.Params.select('interface_size', { '10': '10', '12': '12', '14': '14' }, '12');
-  const getSize = () => Lampa.Platform.screen('mobile') ? 10 : parseInt(Lampa.Storage.field('interface_size')) || 12;
-  const updateSize = () => $('body').css({ fontSize: getSize() + 'px' });
-  updateSize();
-  Lampa.Storage.listener.follow('change', (e) => {
-    if (e.name == 'interface_size') updateSize();
-  });
-
   // FULL
-  Lampa.Listener.follow('full', (e) => {
-    if (e.type !== 'complite') return;
+  function fullStart() {
+    const style = document.createElement('style');
+    style.textContent = `
+      .full-start-new__title-original { font-size: 1.6em; margin-bottom: 0em; }
+      .full-start-new__buttons .full-start__button:not(.focus) span { display: unset; }
+      .source--name { display: none; }
+    `;
+    document.head.appendChild(style);
 
-    // BUTTONS
-    const buttonsContainer = e.body.find('.full-start-new__buttons');
-    const buttonOnline = e.body.find('.view--online');
-    const buttonTorrent = e.body.find('.view--torrent');
-    const buttonBook = e.body.find('.button--book');
+    Lampa.Listener.follow('full', (e) => {
+      if (e.type !== 'complite') return;
 
-    buttonsContainer.children('.full-start__button')
-      .not(buttonOnline).not(buttonTorrent).not(buttonBook)
-      .remove();
+      // TITLE
+      const title = e.data.movie.title;
+      const titleOriginal = e.data.movie.original_title;
+      const titleElement = e.body.find('.full-start-new__title');
 
-    [buttonOnline, buttonTorrent, buttonBook].forEach((button) => {
-      if (button.length) buttonsContainer.append(button);
+      if (title && titleOriginal && title !== titleOriginal) {
+        titleElement.before($('<div class="full-start-new__title-original"></div>').text(titleOriginal));
+      }
+
+      // BUTTONS
+      const buttonsContainer = e.body.find('.full-start-new__buttons');
+      const buttonOnline = e.body.find('.view--online');
+      const buttonTorrent = e.body.find('.view--torrent');
+      const buttonBook = e.body.find('.button--book');
+
+      buttonsContainer.children('.full-start__button')
+        .not(buttonOnline).not(buttonTorrent).not(buttonBook)
+        .remove();
+
+      [buttonOnline, buttonTorrent, buttonBook].forEach((button) => {
+        if (button.length) buttonsContainer.append(button);
+      });
     });
+  }
 
-    // TITLE
-    const title = e.data.movie.title;
-    const titleOriginal = e.data.movie.original_title;
-    const titleElement = e.body.find('.full-start-new__title');
+  // EXIT
+  function exitStart() {
+    let exiting = false;
 
-    if (title && titleOriginal && title !== titleOriginal) {
-      titleElement.before($('<div class="full-start-new__title-original"></div>').text(titleOriginal));
+    function exitItem(object) {
+      return object && object.items ? object.items.find((item) => item.out === true) : null;
     }
-  });
+
+    const originalSelectShow = Lampa.Select.show;
+
+    Lampa.Select.show = function (object) {
+      const item = exitItem(object);
+
+      if (item && typeof object.onSelect === 'function') {
+        if (exiting) return;
+        exiting = true;
+
+        object.onSelect(item);
+
+        setTimeout(() => { exiting = false; }, 1000);
+        return;
+      }
+
+      return originalSelectShow.apply(this, arguments);
+    };
+  }
+
+  // MOBILE
+  function mobileStart() {
+    const BAR_ACTION = 'favorite';
+    const barOrders = { back: 1, main: 2, search: 4, settings: 5 };
+
+    function barClick() {
+      const item = document.querySelector('.menu__item[data-action="' + BAR_ACTION + '"]');
+      if (!item) return;
+      $(item).trigger('hover:enter');
+      if (Lampa.Menu && Lampa.Menu.close) Lampa.Menu.close();
+    }
+
+    function barInsert() {
+      const bar = document.querySelector('.navigation-bar__body');
+      if (!bar || bar.querySelector('.navigation-bar-favorite')) return;
+
+      const item = document.querySelector('.menu__item[data-action="' + BAR_ACTION + '"]');
+      if (!item) return;
+
+      const textEl = item.querySelector('.menu__text');
+      const iconEl = item.querySelector('.menu__ico svg use');
+      const title = textEl ? textEl.textContent.trim() : 'Избранное';
+      const sprite = iconEl ? iconEl.getAttribute('xlink:href').replace('#sprite-', '') : BAR_ACTION;
+
+      Object.keys(barOrders).forEach(action => {
+        const btn = bar.querySelector('[data-action="' + action + '"]');
+        if (btn) btn.style.order = String(barOrders[action]);
+      });
+
+      const el = document.createElement('div');
+      el.className = 'navigation-bar__item navigation-bar-favorite';
+      el.setAttribute('data-action', BAR_ACTION);
+      el.style.order = '3';
+      el.innerHTML =
+        '<div class="navigation-bar__icon"><svg><use xlink:href="#sprite-' + sprite + '"></use></svg></div>' +
+        '<div class="navigation-bar__label">' + title + '</div>';
+      el.addEventListener('click', barClick);
+
+      bar.appendChild(el);
+    }
+
+    barInsert();
+  }
+
+  // INIT
+  function start() {
+    if (window.ui_style) return;
+    window.ui_style = true;
+
+    fullStart();
+    exitStart();
+    if (Lampa.Platform.screen('mobile')) mobileStart();
+  }
+
+  if (window.appready) start();
+  else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });
 
 })();
