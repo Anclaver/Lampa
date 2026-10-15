@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'other',
-    version: '5.2.9',
+    version: '5.2.10',
     name: 'Favorite Plus',
     component: 'favorite_plus'
   };
@@ -48,7 +48,6 @@
     createType(typeName) {
       const favorite = this.getFavorite();
       if (favorite.plusTypes[typeName]) throw new Error('Имя уже используется');
-
       const uid = Lampa.Utils.uid(8).toLowerCase();
       favorite.plusTypes[typeName] = uid;
       favorite[uid] = [];
@@ -61,7 +60,6 @@
       const uid = favorite.plusTypes[oldName];
       if (!uid) throw new Error('Категория не найдена');
       if (favorite.plusTypes[newName]) throw new Error('Имя уже используется');
-
       favorite.plusTypes[newName] = uid;
       delete favorite.plusTypes[oldName];
       Lampa.Storage.set(STORAGE_KEY, favorite);
@@ -72,7 +70,6 @@
       const favorite = this.getFavorite();
       const uid = favorite.plusTypes[typeName];
       if (!uid) throw new Error('Категория не найдена');
-
       delete favorite.plusTypes[typeName];
       delete favorite[uid];
       this.pruneCards(favorite);
@@ -85,7 +82,6 @@
     pruneCards(favorite) {
       const cards = favorite.plusTypes.card;
       if (!cards) return;
-
       const referenced = new Set();
       this.getTypesWithoutSystem(favorite).forEach((key) => {
         (favorite[favorite.plusTypes[key]] || []).forEach((id) => referenced.add(String(id)));
@@ -105,12 +101,10 @@
       const favorite = this.getFavorite();
       const uid = favorite.plusTypes[typeName];
       if (!uid) throw new Error('Категория не найдена');
-
       const typeList = favorite[uid] || [];
       const plusTypeCards = favorite.plusTypes.card;
       const cardId = card.id;
       const isAdded = typeList.includes(cardId);
-
       if (isAdded) {
         Lampa.Arrays.remove(typeList, cardId);
         const isInAnyList = this.getTypesWithoutSystem(favorite)
@@ -166,10 +160,8 @@
 
     goExport() {
       if (window.sync_disable) return;
-
       const value = Lampa.Storage.get(STORAGE_KEY, {});
       if (!value.hasOwnProperty('plusTypes')) return;
-
       const uri = this.account(
         window.location.origin +
         '/storage/set?path=sync_favorite_plus'
@@ -191,7 +183,6 @@
 
     goImport(callback) {
       if (window.sync_disable) return;
-
       const network = new Lampa.Reguest();
       network.silent(
         this.account(
@@ -226,7 +217,6 @@
   const plusReorder = {
     apply(card) {
       if (!card || !card.id) return;
-
       this.applySystem(card);
       this.applyPlus(card);
       this.refresh();
@@ -235,7 +225,6 @@
     applySystem(card) {
       const status = Lampa.Favorite.check(card) || {};
       const data = Lampa.Favorite.full() || {};
-
       Object.keys(status)
         .filter((cat) => cat !== 'any' && status[cat])
         .forEach((cat) => {
@@ -250,14 +239,12 @@
       const cards = favorite.plusTypes.card || [];
       const at = cards.findIndex((item) => item && String(item.id) === String(card.id));
       if (at <= 0) return;
-
       cards.unshift(cards.splice(at, 1)[0]);
       Lampa.Storage.set(STORAGE_KEY, favorite);
     },
 
     refresh() {
       const stack = Lampa.Activity.all ? Lampa.Activity.all() : [];
-
       stack.forEach((item) => {
         if (item.component === 'bookmarks' && item.activity && item.activity.refresh) {
           item.activity.refresh();
@@ -305,7 +292,6 @@
           { title: 'Удалить', action: 'remove' }
         ];
         const controllerName = Lampa.Controller.enabled().name;
-
         Lampa.Select.show({
           title: 'Выберите действие',
           items: menu,
@@ -394,14 +380,12 @@
         call: (params, screen) => {
           const favorite = favoritePlus.getFavorite();
           const lines = [];
-
           favoritePlus.getTypesWithoutSystem(favorite).forEach((typeName) => {
             const typeUid = favorite.plusTypes[typeName];
             const typeList = favorite[typeUid] || [];
             const typeCards = favorite.plusTypes.card.filter((card) => typeList.indexOf(card.id) !== -1);
             const slicedCards = Lampa.Arrays.clone(typeCards.slice(0, 20));
             const totalPages = typeCards.length > 20 ? Math.ceil(typeCards.length / 20) : 1;
-
             slicedCards.forEach((item) => {
               item.params = item.params || {};
               item.params.emit = {
@@ -452,7 +436,6 @@
   const plusCardService = {
     extendContextMenu(object) {
       const self = this;
-
       favoritePlus.getTypesWithoutSystem(favoritePlus.getFavorite()).forEach((plusCategory) => {
         const $menuItem = $(
           '<div class="selectbox-item selector">' +
@@ -465,7 +448,6 @@
         $menuItem.on('hover:enter', function () {
           const category = $(this).find('.selectbox-item__title').text();
           const type = favoritePlus.toggleCard(category, object.data);
-
           $(this).toggleClass('selectbox-item--checked');
 
           setTimeout(() => {
@@ -494,7 +476,6 @@
       const $plusIcon = $('.icon--plus', $iconHolder);
       const hasIcon = $plusIcon.length > 0;
       const hidden = hasIcon && $plusIcon.hasClass('hide');
-
       if (isFavorite) {
         if (!hasIcon) {
           $iconHolder.prepend(Lampa.Template.get('plus-icon'));
@@ -509,7 +490,6 @@
     refreshBookmarkIcon() {
       const active = Lampa.Activity.active();
       if (active.component !== 'full') return;
-
       const card = active.card;
       const plusAny = favoritePlus.getCards().indexOf(card.id) !== -1;
       const favStates = plusAny ? {} : Lampa.Favorite.check(card);
@@ -550,7 +530,6 @@
     cardModule.Menu.onCreate = function () {
       const self = this;
       const favMenuList = this.menu_list.filter((m) => m.title === Lampa.Lang.translate('settings_input_links'))[0];
-
       if (favMenuList) {
         const originalMenu = favMenuList.menu;
         favMenuList.menu = () => {
@@ -616,7 +595,6 @@
 
     Lampa.Listener.follow('full', (event) => {
       if (event.type !== 'complite') return;
-
       const active = Lampa.Activity.active();
       plusCardService.refreshBookmarkIcon();
 
@@ -628,10 +606,8 @@
 
     Lampa.Listener.follow('activity', (event) => {
       if (event.type !== 'create' || event.component !== 'bookmarks') return;
-
       const $render = event.object.activity.render();
       if ($('.plus-type-new', $render).length !== 0) return;
-
       plusPageService.renderAddButton($render);
 
       const favorite = favoritePlus.getFavorite();
