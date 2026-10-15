@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.3.1',
+    version: '5.3.2',
     name: 'UI Style',
     component: 'ui_style'
   };
@@ -101,7 +101,7 @@
       const title = textEl ? textEl.textContent.trim() : 'Избранное';
       const sprite = iconEl ? iconEl.getAttribute('xlink:href').replace('#sprite-', '') : BAR_ACTION;
 
-      Object.keys(barOrders).forEach(action => {
+      Object.keys(barOrders).forEach((action) => {
         const btn = bar.querySelector('[data-action="' + action + '"]');
         if (btn) btn.style.order = String(barOrders[action]);
       });
@@ -132,6 +132,6 @@
   }
 
   if (window.appready) start();
-  else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });
+  else Lampa.Listener.follow('app', (event) => { if (event.type === 'ready') start(); });
 
 })();
