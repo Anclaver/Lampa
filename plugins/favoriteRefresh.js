@@ -3,16 +3,15 @@
 
   const manifest = {
     type: 'other',
-    version: '5.0.3',
-    name: 'Favorite Poster',
-    component: 'favorite_poster'
+    version: '5.0.4',
+    name: 'Favorite Refresh',
+    component: 'favorite_refresh'
   };
   Lampa.Manifest.plugins = manifest;
 
   // STORAGE
-  const LAST_RUN_KEY = 'poster_refresh_last';
-  const DAY = 24 * 60 * 60 * 1000;
-  const DELAY = 250;
+  const INTERVAL = 24 * 60 * 60 * 1000;
+  const LAST_REFRESH_KEY = 'favorite_refresh_last';
 
   const cardType = (card) => card.original_name ? 'tv' : 'movie';
   const isTmdb = (card) => card && card.id && card.poster_path && (!card.source || card.source === 'tmdb');
@@ -40,12 +39,29 @@
   }
 
   // TMDB
-  function tmdbPoster(card) {
+  function tmdbData(card) {
     return new Promise((resolve) => {
       Lampa.Api.sources.tmdb.get(cardType(card) + '/' + card.id, {}, (data) => {
-        resolve(data && data.poster_path ? data.poster_path : null);
+        resolve(data || null);
       }, () => resolve(null));
     });
+  }
+
+  function applyTitles(card, data) {
+    let changed = false;
+
+    const assign = (field, value) => {
+      if (typeof value === 'undefined' || value === card[field]) return;
+      card[field] = value;
+      changed = true;
+    };
+
+    assign('title', data.title || data.name);
+    assign('name', data.name);
+    assign('original_title', data.original_title || data.original_name);
+    assign('original_name', data.original_name);
+
+    return changed;
   }
 
   // SYNC
@@ -68,20 +84,27 @@
     }).catch(() => {});
   }
 
-  function apply(cards, key, posters) {
+  function apply(cards, key, fetched) {
     const changed = cards.filter((card) => {
-      const poster = posters[card.id];
-      if (!poster || poster === card.poster_path) return false;
-      card.poster_path = poster;
-      card.img = Lampa.Api.img(poster, 'w300');
-      return true;
+      const data = fetched[card.id];
+      if (!data) return false;
+
+      let touched = applyTitles(card, data);
+
+      if (data.poster_path && data.poster_path !== card.poster_path) {
+        card.poster_path = data.poster_path;
+        card.img = Lampa.Api.img(data.poster_path, 'w300');
+        touched = true;
+      }
+
+      return touched;
     });
 
-    if (!changed.length) return 0;
+    if (!changed.length) return [];
 
     Lampa.Storage.set(key, Lampa.Storage.get(key, {}));
     if (key === 'favorite') pushFavorite(changed);
-    return changed.length;
+    return changed;
   }
 
   function run() {
@@ -93,36 +116,39 @@
       if (!seen[card.id]) { seen[card.id] = true; queue.push(card); }
     }));
 
-    const posters = {};
+    const fetched = {};
 
     Promise.all(queue.map((card, i) => new Promise((resolve) => {
-      setTimeout(() => tmdbPoster(card).then((poster) => {
-        posters[card.id] = poster;
+      setTimeout(() => tmdbData(card).then((data) => {
+        fetched[card.id] = data;
         resolve();
-      }), i * DELAY);
+      }), i * 250);
     }))).then(() => {
-      const updated = groups.reduce((sum, group) => sum + apply(group.cards, group.key, posters), 0);
-      console.log('UI Poster', 'обновлено ' + updated + ' из ' + queue.length);
+      const updated = new Map();
+      groups.forEach((group) => apply(group.cards, group.key, fetched).forEach((card) => updated.set(card.id, card)));
+
+      const list = [...updated.values()];
+      console.log('Favorite Refresh', list.map((card) => card.id + ': ' + (card.title || card.name)));
     });
   }
 
   // INIT
   function start() {
-    if (window.favorite_poster) return;
-    window.favorite_poster = true;
+    if (window.favorite_refresh) return;
+    window.favorite_refresh = true;
 
-    window.posterRefreshNow = () => {
-      Lampa.Storage.set(LAST_RUN_KEY, Date.now());
+    window.favoriteRefreshNow = () => {
+      Lampa.Storage.set(LAST_REFRESH_KEY, Date.now());
       run();
     };
 
     const check = () => {
-      if (Date.now() - Lampa.Storage.get(LAST_RUN_KEY, 0) < DAY) return;
-      Lampa.Storage.set(LAST_RUN_KEY, Date.now());
+      if (Date.now() - Lampa.Storage.get(LAST_REFRESH_KEY, 0) < INTERVAL) return;
+      Lampa.Storage.set(LAST_REFRESH_KEY, Date.now());
       run();
     };
 
-    Lampa.Timer.add(DAY, check, true, true);
+    Lampa.Timer.add(INTERVAL, check, true, true);
   }
 
   if (window.appready) start();
