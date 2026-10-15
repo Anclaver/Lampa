@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'other',
-    version: '5.0.5',
+    version: '5.0.6',
     name: 'Favorite Refresh',
     component: 'favorite_refresh'
   };
@@ -90,7 +90,6 @@
       if (!data) return false;
 
       let touched = applyTitles(card, data);
-
       if (data.poster_path && data.poster_path !== card.poster_path) {
         card.poster_path = data.poster_path;
         card.img = Lampa.Api.img(data.poster_path, 'w300');
@@ -117,7 +116,6 @@
     }));
 
     const fetched = {};
-
     Promise.all(queue.map((card, i) => new Promise((resolve) => {
       setTimeout(() => tmdbData(card).then((data) => {
         fetched[card.id] = data;
