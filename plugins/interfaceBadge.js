@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.2.10',
+    version: '5.2.11',
     name: 'UI Badge',
     component: 'ui_badge'
   };
@@ -229,7 +229,7 @@
     if (!title) return null;
     const t = title.toLowerCase();
     for (const key in mapQualityBad) {
-      if (mapQualityBad[key].some(p => p.test(t))) return key;
+      if (mapQualityBad[key].some((p) => p.test(t))) return key;
     }
     return null;
   }
@@ -316,10 +316,10 @@
 
   // RENDER
   function cardView(card) {
-    let view = card.__uiBadgeView;
+    let view = card.uiBadgeView;
     if (view && view.isConnected && card.contains(view)) return view;
     view = card.querySelector('.card__view');
-    card.__uiBadgeView = view;
+    card.uiBadgeView = view;
     return view;
   }
   function setBadge(card, cls, text, level) {
@@ -342,7 +342,7 @@
     return parts[2] + '.' + parts[1] + '.' + parts[0];
   }
   function findLevel(map, value) {
-    const rule = map.find(r => value >= r.min);
+    const rule = map.find((r) => value >= r.min);
     return rule ? rule.level : null;
   }
 
@@ -506,7 +506,7 @@
 
     try {
       const CardMaker = Lampa.Maker.map('Card');
-      if (CardMaker && CardMaker.Card && !CardMaker.Card.__ui_badge_patched__) {
+      if (CardMaker && CardMaker.Card && !CardMaker.Card.uiBadgePatched) {
         const originalOnVisible = CardMaker.Card.onVisible;
         CardMaker.Card.onVisible = function () {
           if (originalOnVisible) originalOnVisible.apply(this, arguments);
@@ -516,7 +516,7 @@
           if (!data && this.card_data) data = this.card_data;
           if (card && data && data.id) { scanObserveCard(card); processCard(card); }
         };
-        CardMaker.Card.__ui_badge_patched__ = true;
+        CardMaker.Card.uiBadgePatched = true;
       }
       window.ui_badge_card = true;
     } catch (_) { }
@@ -615,7 +615,7 @@
 
     Lampa.Listener.follow('activity', (e) => {
       if (e.type === 'destroy' || e.type === 'archive') { scanLater(scanPrune, 0, 'prune'); return; }
-      [0, 150, 400, 900].forEach(d => scanLater(scan, d, 'scan-' + d));
+      [0, 150, 400, 900].forEach((d) => scanLater(scan, d, 'scan-' + d));
     });
     Lampa.Listener.follow('line', (e) => {
       if (!e || (e.type !== 'append' && e.type !== 'create' && e.type !== 'visible')) return;
@@ -645,6 +645,6 @@
   }
 
   if (window.appready) start();
-  else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });
+  else Lampa.Listener.follow('app', (event) => { if (event.type === 'ready') start(); });
 
 })();
