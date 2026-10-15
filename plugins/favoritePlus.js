@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'other',
-    version: '5.2.8',
+    version: '5.2.9',
     name: 'Favorite Plus',
     component: 'favorite_plus'
   };
@@ -273,7 +273,7 @@
   };
 
   // PAGE
-  const plusPageSvc = {
+  const plusPageService = {
     restoreController(controllerName, $focusElement, $render) {
       Lampa.Controller.toggle(controllerName);
       Lampa.Controller.toggle('content');
@@ -449,7 +449,7 @@
   };
 
   // CARD
-  const plusCardSvc = {
+  const plusCardService = {
     extendContextMenu(object) {
       const self = this;
 
@@ -476,7 +476,7 @@
             }
           }, 0);
 
-          plusPageSvc.refresh(type);
+          plusPageService.refresh(type);
         });
 
         if (favoritePlus.getTypeList(plusCategory).indexOf(object.data.id) >= 0) {
@@ -543,7 +543,7 @@
     cardModule.Favorite.onUpdate = function () {
       const self = this;
       originalFavoriteUpdate.apply(self);
-      plusCardSvc.refreshPlusIcon({ data: self.data, card: self.html });
+      plusCardService.refreshPlusIcon({ data: self.data, card: self.html });
     };
 
     const originalMenuCreate = cardModule.Menu.onCreate;
@@ -618,11 +618,11 @@
       if (event.type !== 'complite') return;
 
       const active = Lampa.Activity.active();
-      plusCardSvc.refreshBookmarkIcon();
+      plusCardService.refreshBookmarkIcon();
 
       const $btnBook = $('.button--book', active.activity.render());
       $btnBook.on('hover:enter', () => {
-        plusCardSvc.extendContextMenu({ data: active.card });
+        plusCardService.extendContextMenu({ data: active.card });
       });
     });
 
@@ -632,13 +632,13 @@
       const $render = event.object.activity.render();
       if ($('.plus-type-new', $render).length !== 0) return;
 
-      plusPageSvc.renderAddButton($render);
+      plusPageService.renderAddButton($render);
 
       const favorite = favoritePlus.getFavorite();
       favoritePlus.getTypesWithoutSystem(favorite).forEach((typeName) => {
         const typeUid = favorite.plusTypes[typeName];
         const typeCounter = (favorite[typeUid] || []).length;
-        plusPageSvc.renderPlusButton({
+        plusPageService.renderPlusButton({
           name: typeName,
           uid: typeUid,
           counter: typeCounter
@@ -647,7 +647,7 @@
     });
 
     plusReorder.init();
-    plusPageSvc.registerLines();
+    plusPageService.registerLines();
   }
 
   if (window.appready) start();
