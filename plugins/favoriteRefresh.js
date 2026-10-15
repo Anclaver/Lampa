@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'other',
-    version: '5.0.4',
+    version: '5.0.5',
     name: 'Favorite Refresh',
     component: 'favorite_refresh'
   };
@@ -129,6 +129,8 @@
 
       const list = [...updated.values()];
       console.log('Favorite Refresh', list.map((card) => card.id + ': ' + (card.title || card.name)));
+
+      if (!queue.length || queue.some((card) => fetched[card.id])) Lampa.Storage.set(LAST_REFRESH_KEY, Date.now());
     });
   }
 
@@ -137,18 +139,14 @@
     if (window.favorite_refresh) return;
     window.favorite_refresh = true;
 
-    window.favoriteRefreshNow = () => {
-      Lampa.Storage.set(LAST_REFRESH_KEY, Date.now());
-      run();
-    };
+    window.favoriteRefreshNow = () => run();
 
     const check = () => {
       if (Date.now() - Lampa.Storage.get(LAST_REFRESH_KEY, 0) < INTERVAL) return;
-      Lampa.Storage.set(LAST_REFRESH_KEY, Date.now());
       run();
     };
 
-    Lampa.Timer.add(INTERVAL, check, true, true);
+    check();
   }
 
   if (window.appready) start();
