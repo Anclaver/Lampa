@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.3.2',
+    version: '5.3.3',
     name: 'UI Style',
     component: 'ui_style'
   };
@@ -21,12 +21,10 @@
 
     Lampa.Listener.follow('full', (e) => {
       if (e.type !== 'complite') return;
-
       // TITLE
       const title = e.data.movie.title;
       const titleOriginal = e.data.movie.original_title;
       const titleElement = e.body.find('.full-start-new__title');
-
       if (title && titleOriginal && title !== titleOriginal) {
         titleElement.before($('<div class="full-start-new__title-original"></div>').text(titleOriginal));
       }
@@ -36,7 +34,6 @@
       const buttonOnline = e.body.find('.view--online');
       const buttonTorrent = e.body.find('.view--torrent');
       const buttonBook = e.body.find('.button--book');
-
       buttonsContainer.children('.full-start__button')
         .not(buttonOnline).not(buttonTorrent).not(buttonBook)
         .remove();
@@ -56,10 +53,8 @@
     }
 
     const originalSelectShow = Lampa.Select.show;
-
     Lampa.Select.show = function (object) {
       const item = exitItem(object);
-
       if (item && typeof object.onSelect === 'function') {
         if (exiting) return;
         exiting = true;
@@ -89,18 +84,15 @@
     function barModify() {
       const bar = document.querySelector('.navigation-bar__body');
       if (!bar || bar.querySelector('.navigation-bar-favorite')) return;
-
       const back = document.querySelector('.navigation-bar__item[data-action="back"]');
       if (back) back.remove();
 
       const item = document.querySelector('.menu__item[data-action="' + BAR_ACTION + '"]');
       if (!item) return;
-
       const textEl = item.querySelector('.menu__text');
       const iconEl = item.querySelector('.menu__ico svg use');
       const title = textEl ? textEl.textContent.trim() : 'Избранное';
       const sprite = iconEl ? iconEl.getAttribute('xlink:href').replace('#sprite-', '') : BAR_ACTION;
-
       Object.keys(barOrders).forEach((action) => {
         const btn = bar.querySelector('[data-action="' + action + '"]');
         if (btn) btn.style.order = String(barOrders[action]);
