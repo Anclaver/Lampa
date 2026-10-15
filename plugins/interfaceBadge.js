@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.2.11',
+    version: '5.2.12',
     name: 'UI Badge',
     component: 'ui_badge'
   };
@@ -355,7 +355,6 @@
     const status = info && info.status;
     const level = mapStatus[mapStatusKey[status]];
     if (!level) return;
-
     age.setAttribute('data-level', level);
 
     const data = card.card_data;
@@ -367,7 +366,6 @@
   function renderDuration(card, info) {
     const data = card && card.card_data;
     if (!data) return;
-
     if (data.original_name) {
       const last = info && info.last_episode_to_air;
       if (!last || !last.season_number || !last.episode_number) {
@@ -392,7 +390,6 @@
   function renderWatched(card, info) {
     const data = card && card.card_data;
     if (!data) return;
-
     if (data.original_name) {
       const last = info && info.last_episode_to_air;
       if (!last) { setBadge(card, 'card__watched', null); return; }
@@ -430,7 +427,6 @@
   function renderVote(el, info) {
     let voteEl = el;
     let view = null;
-
     if (el.classList.contains('card')) {
       view = el.querySelector('.card__view');
       if (!view) return;
@@ -439,7 +435,6 @@
 
     const value = info && parseFloat(info.vote_average);
     if (!voteEl && !value) return;
-
     if (value) {
       if (!voteEl) {
         voteEl = document.createElement('div');
@@ -481,7 +476,6 @@
   function processCard(card) {
     const data = card && card.card_data;
     if (!data || !data.id || (!data.original_name && !data.original_title)) return;
-
     processPull(card);
     renderAge(card);
     renderType(card, !!data.original_name);
@@ -503,7 +497,6 @@
   }
   function processListener() {
     if (window.ui_badge_card) return;
-
     try {
       const CardMaker = Lampa.Maker.map('Card');
       if (CardMaker && CardMaker.Card && !CardMaker.Card.uiBadgePatched) {
@@ -570,11 +563,9 @@
   function scanContainer(target) {
     if (!target || !target.querySelectorAll) return;
     if (scanIsBlocked()) return;
-
     const cards = target.querySelectorAll('.card:not([data-observed])');
     const wH = window.innerHeight || 1000;
     let updated = 0;
-
     for (let i = 0; i < cards.length; i++) {
       const card = cards[i];
       scanObserveCard(card);
@@ -582,7 +573,6 @@
       if (updated >= SCAN_LIMIT) break;
       if (!card.card_data || !card.card_data.id) continue;
       if (!scanIsNearViewport(card, wH)) continue;
-
       processCard(card);
       updated++;
     }
