@@ -3,15 +3,16 @@
 
   const manifest = {
     type: 'other',
-    version: '5.0.6',
+    version: '5.0.7',
     name: 'Favorite Refresh',
     component: 'favorite_refresh'
   };
   Lampa.Manifest.plugins = manifest;
 
   // STORAGE
-  const INTERVAL = 24 * 60 * 60 * 1000;
-  const LAST_REFRESH_KEY = 'favorite_refresh_last';
+  const DELAY_START = 10 * 1000;
+  const DELAY_REFRESH = 24 * 60 * 60 * 1000;
+  const REFRESH_TIME_KEY = 'favorite_refresh_time';
 
   const cardType = (card) => card.original_name ? 'tv' : 'movie';
   const isTmdb = (card) => card && card.id && card.poster_path && (!card.source || card.source === 'tmdb');
@@ -128,7 +129,7 @@
       const list = [...updated.values()];
       console.log('Favorite Refresh', list.map((card) => card.id + ': ' + (card.title || card.name)));
 
-      if (!queue.length || queue.some((card) => fetched[card.id])) Lampa.Storage.set(LAST_REFRESH_KEY, Date.now());
+      if (!queue.length || queue.some((card) => fetched[card.id])) Lampa.Storage.set(REFRESH_TIME_KEY, Date.now());
     });
   }
 
@@ -140,11 +141,11 @@
     window.favoriteRefreshNow = () => run();
 
     const check = () => {
-      if (Date.now() - Lampa.Storage.get(LAST_REFRESH_KEY, 0) < INTERVAL) return;
+      if (Date.now() - Lampa.Storage.get(REFRESH_TIME_KEY, 0) < DELAY_REFRESH) return;
       run();
     };
 
-    check();
+    setTimeout(check, DELAY_START);
   }
 
   if (window.appready) start();
