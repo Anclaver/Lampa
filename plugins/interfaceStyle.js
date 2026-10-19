@@ -3,22 +3,26 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.3.3',
+    version: '5.3.4',
     name: 'UI Style',
     component: 'ui_style'
   };
   Lampa.Manifest.plugins = manifest;
 
+  // STYLES
+  const style = document.createElement('style');
+  style.textContent = `
+    .full-start-new__title-original { font-size: 1.6em; margin-bottom: 0em; }
+    .full-start-new__buttons .full-start__button:not(.focus) span { display: unset; }
+    .source--name { display: none; }
+
+    .time-line > div { background-color: #3498DB; }
+    .torrent-serial .time-line { width: stretch; top: unset; bottom: 0; left: unset; }
+  `;
+  document.head.appendChild(style);
+
   // FULL
   function fullStart() {
-    const style = document.createElement('style');
-    style.textContent = `
-      .full-start-new__title-original { font-size: 1.6em; margin-bottom: 0em; }
-      .full-start-new__buttons .full-start__button:not(.focus) span { display: unset; }
-      .source--name { display: none; }
-    `;
-    document.head.appendChild(style);
-
     Lampa.Listener.follow('full', (e) => {
       if (e.type !== 'complite') return;
       // TITLE
