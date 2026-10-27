@@ -3,14 +3,14 @@
 
   const manifest = {
     type: 'other',
-    version: '5.0.7',
+    version: '5.0.8',
     name: 'Favorite Refresh',
     component: 'favorite_refresh'
   };
   Lampa.Manifest.plugins = manifest;
 
   // STORAGE
-  const DELAY_START = 10 * 1000;
+  const DELAY_START = 2 * 1000;
   const DELAY_REFRESH = 24 * 60 * 60 * 1000;
   const REFRESH_TIME_KEY = 'favorite_refresh_time';
 
