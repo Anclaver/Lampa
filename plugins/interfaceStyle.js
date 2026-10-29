@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.3.4',
+    version: '5.3.5',
     name: 'UI Style',
     component: 'ui_style'
   };
@@ -18,6 +18,11 @@
 
     .time-line > div { background-color: #3498DB; }
     .torrent-serial .time-line { width: stretch; top: unset; bottom: 0; left: unset; }
+
+    .torrent-item__ffprobe > .m-general + div,
+    .torrent-item__ffprobe > div:not(.m-channels):not(.m-audio) + .m-channels,
+    .torrent-item__ffprobe > div:not(.m-channels):not(.m-audio) + .m-audio,
+    .torrent-item__ffprobe > div:not(.m-subtitle) + .m-subtitle { clear: both; }
   `;
   document.head.appendChild(style);
 
