@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.3.5',
+    version: '5.3.6',
     name: 'UI Style',
     component: 'ui_style'
   };
@@ -23,6 +23,17 @@
     .torrent-item__ffprobe > div:not(.m-channels):not(.m-audio) + .m-channels,
     .torrent-item__ffprobe > div:not(.m-channels):not(.m-audio) + .m-audio,
     .torrent-item__ffprobe > div:not(.m-subtitle) + .m-subtitle { clear: both; }
+
+    @media screen and (min-width: 768px) {
+      .torrent-item__details { flex-wrap: wrap; }
+      .torrent-item__tracker { order: 1; }
+      .torrent-item__seeds { order: 2; }
+      .torrent-item__grabs { order: 3; margin-right: 0; }
+      .torrent-item__details::after { content: ''; order: 4; flex-basis: 100%; margin-top: 0.4em; }
+      .torrent-item__date { order: 5; margin-right: auto; }
+      .torrent-item__bitrate { order: 6; margin-right: 0; }
+      .torrent-item__size { order: 7; margin-left: 1em; }
+    }
   `;
   document.head.appendChild(style);
 
