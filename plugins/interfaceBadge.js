@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.2.12',
+    version: '5.2.13',
     name: 'UI Badge',
     component: 'ui_badge'
   };
@@ -577,14 +577,40 @@
       updated++;
     }
   }
-  function scan() {
+  function scanRoot() {
     let render = null;
     try {
       const a = Lampa.Activity && Lampa.Activity.active ? Lampa.Activity.active() : null;
       render = a && a.activity && a.activity.render ? a.activity.render() : null;
       if (render && render.nodeType !== 1 && render.length) render = render[0];
     } catch (_) { }
-    scanContainer(render && render.nodeType === 1 ? render : document.body);
+    return render && render.nodeType === 1 ? render : document.body;
+  }
+  function scan() {
+    scanContainer(scanRoot());
+  }
+
+  // TIMELINE
+  function refreshTimeline() {
+    if (scanIsBlocked()) return;
+    const cards = scanRoot().querySelectorAll('.card[data-pulled]');
+    const wH = window.innerHeight || 1000;
+    let updated = 0;
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      const data = card.card_data;
+      if (!data || !data.id) continue;
+      if (!scanIsNearViewport(card, wH)) continue;
+      if (updated >= SCAN_LIMIT) break;
+      const type = data.original_name ? 'tv' : 'movie';
+      const cacheKey = data.original_name ? TMDB_CACHE_TV : TMDB_CACHE_MOVIE;
+      tmdbGet(type, data.id, cacheKey, (info) => {
+        if (!card.parentNode) return;
+        renderWatched(card, info);
+        renderDuration(card, info);
+      });
+      updated++;
+    }
   }
 
   // INIT
@@ -615,6 +641,10 @@
         else if (e.body.length && e.body[0] && e.body[0].nodeType === 1) body = e.body[0];
       }
       scanLater(() => body ? scanContainer(body) : scan(), 30, 'scan-line');
+    });
+    Lampa.Listener.follow('state:changed', (e) => {
+      if (!e || e.target !== 'timeline' || e.reason !== 'read') return;
+      scanLater(refreshTimeline, 0, 'scan-timeline');
     });
     Lampa.Listener.follow('full', (event) => {
       if (event.type === 'complite' && event.data && event.data.movie) {
