@@ -3,7 +3,7 @@
 
   const manifest = {
     type: 'interface',
-    version: '5.3.6',
+    version: '5.3.7',
     name: 'UI Style',
     component: 'ui_style'
   };
@@ -38,7 +38,7 @@
   document.head.appendChild(style);
 
   // FULL
-  function fullStart() {
+  function initFull() {
     Lampa.Listener.follow('full', (e) => {
       if (e.type !== 'complite') return;
       // TITLE
@@ -57,7 +57,6 @@
       buttonsContainer.children('.full-start__button')
         .not(buttonOnline).not(buttonTorrent).not(buttonBook)
         .remove();
-
       [buttonOnline, buttonTorrent, buttonBook].forEach((button) => {
         if (button.length) buttonsContainer.append(button);
       });
@@ -65,32 +64,31 @@
   }
 
   // EXIT
-  function exitStart() {
+  function initExit() {
     let exiting = false;
-
-    function exitItem(object) {
-      return object && object.items ? object.items.find((item) => item.out === true) : null;
-    }
-
     const originalSelectShow = Lampa.Select.show;
+
     Lampa.Select.show = function (object) {
-      const item = exitItem(object);
+      const item = object && object.items ? object.items.find((i) => i.out === true) : null;
       if (item && typeof object.onSelect === 'function') {
         if (exiting) return;
         exiting = true;
-
         object.onSelect(item);
-
         setTimeout(() => { exiting = false; }, 1000);
         return;
       }
-
       return originalSelectShow.apply(this, arguments);
     };
   }
 
+  // TV
+  function initTv() {
+    if (Lampa.Helper) Lampa.Helper.show = function () {};
+    if (Lampa.RemoteHelper) Lampa.RemoteHelper.show = function () {};
+  }
+
   // MOBILE
-  function mobileStart() {
+  function initMobile() {
     const BAR_ACTION = 'favorite';
     const barOrders = { main: 2, search: 4, settings: 5 };
 
@@ -106,7 +104,6 @@
       if (!bar || bar.querySelector('.navigation-bar-favorite')) return;
       const back = document.querySelector('.navigation-bar__item[data-action="back"]');
       if (back) back.remove();
-
       const item = document.querySelector('.menu__item[data-action="' + BAR_ACTION + '"]');
       if (!item) return;
       const textEl = item.querySelector('.menu__text');
@@ -126,7 +123,6 @@
         '<div class="navigation-bar__icon"><svg><use xlink:href="#sprite-' + sprite + '"></use></svg></div>' +
         '<div class="navigation-bar__label">' + title + '</div>';
       el.addEventListener('click', barClick);
-
       bar.appendChild(el);
     }
 
@@ -138,9 +134,10 @@
     if (window.ui_style) return;
     window.ui_style = true;
 
-    fullStart();
-    exitStart();
-    if (Lampa.Platform.screen('mobile')) mobileStart();
+    initFull();
+    initExit();
+    if (Lampa.Platform.tv()) initTv();
+    if (Lampa.Platform.screen('mobile')) initMobile();
   }
 
   if (window.appready) start();
